@@ -1,0 +1,35 @@
+name: Build APK
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unzip project
+        run: |
+          ls
+          ZIP=$(ls *.zip | head -n 1)
+          echo "Found zip: $ZIP"
+          mkdir project
+          unzip -q "$ZIP" -d project
+          FOUND=$(find project -maxdepth 3 -name "settings.gradle.kts" | head -n 1)
+          PROJ=$(dirname "$FOUND")
+          echo "Project dir: $PROJ"
+          mv "$PROJ" extracted
+          ls extracted
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.7
+          build-root-directory: extracted
+      - name: Build debug APK
+        run: gradle assembleDebug --stacktrace
+        working-directory: extracted
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: extracted/app/build/outputs/apk/debug/app-debug.apk
